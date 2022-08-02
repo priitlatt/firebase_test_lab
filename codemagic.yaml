@@ -19,7 +19,7 @@ definitions:
         - appstore_credentials
         - ios
       vars:
-        BUNDLE_ID: "com.example.firebaseTestLab"
+        BUNDLE_ID: "com.example.firebaseTestLabtest"
         XCODE_WORKSPACE: "Runner.xcworspace"
         XCODE_SCHEME: "Runner"
 workflows:
