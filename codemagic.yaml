@@ -80,11 +80,11 @@ workflows:
           find . -name "Podfile" -execdir pod install \;
      
           
-      - name: Flutter Integration Tests iOS
-        script: |
-           flutter emulators --launch apple_ios_simulator
-           xcrun simctl boot 0B315533-768E-47B9-AC74-94CDF3FAE84F
-           flutter -d 0B315533-768E-47B9-AC74-94CDF3FAE84F test integration_test
+      # - name: Flutter Integration Tests iOS
+      #   script: |
+      #      flutter emulators --launch apple_ios_simulator
+      #      xcrun simctl boot 0B315533-768E-47B9-AC74-94CDF3FAE84F
+      #      flutter -d 0B315533-768E-47B9-AC74-94CDF3FAE84F test integration_test
       - name: Flutter build ipa and automatic versioning
         script: |
           flutter build ipa --release \
@@ -93,17 +93,28 @@ workflows:
           --export-options-plist=/Users/builder/export_options.plist
       - name: Run Firebase Test Lab tests
         script: |
+            flutter build ipa integration_test/app_test.dart --release 
 
-          echo $GCLOUD_KEY_FILE > ./gcloud_key_file.json
-          gcloud auth activate-service-account --key-file=gcloud_key_file.json
+            pushd ios
+            xcodebuild \
+              -workspace Runner.xcworkspace \
+              -scheme Runner \
+              -derivedDataPath "../build/ios_integ" \
+              -sdk iphoneos build-for-testing
+            popd
 
-          gcloud --quiet config set project $FIREBASE_PROJECT  
+            pushd build/ios_integ/Build/Products
+            zip -r "ios_tests.zip" "Release-staging-iphoneos" "staging_iphoneos15.5-arm64.xctestrun"
+            popd
 
-          gcloud firebase test ios run --test PATH/TO/MyTests.zip \
+            echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
+            gcloud auth activate-service-account --key-file=gcloud_key_file.json
+            gcloud --quiet config set project vcp-mobile-stage
+            gcloud firebase test ios run \
             --test build/ios_integ/Build/Products/ios_tests.zip \
             --device model=iphone11,version=13.6,locale=en_US,orientation=portrait \
-            --timeout 3m
-   
+            --timeout 10m
+              
 
       # - name: BrowserStack upload
       #   script: |      
