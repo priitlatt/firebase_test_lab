@@ -17,6 +17,7 @@ definitions:
     automatic_ios_signing: &automatic_ios_signing
       groups:
         - ios
+        - firebase_credentials
       vars:
         BUNDLE_ID: "com.example.firebaseTestLabtest"
         XCODE_WORKSPACE: "Runner.xcworspace"
@@ -90,6 +91,20 @@ workflows:
           --build-name=6.0.0 \
           --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
           --export-options-plist=/Users/builder/export_options.plist
+      - name: Run Firebase Test Lab tests
+        script: |
+
+          echo $GCLOUD_KEY_FILE > ./gcloud_key_file.json
+          gcloud auth activate-service-account --key-file=gcloud_key_file.json
+
+          gcloud --quiet config set project $FIREBASE_PROJECT  
+
+          gcloud firebase test ios run --test PATH/TO/MyTests.zip \
+            --test build/ios_integ/Build/Products/ios_tests.zip \
+            --device model=iphone11,version=13.6,locale=en_US,orientation=portrait \
+            --timeout 3m
+   
+
       # - name: BrowserStack upload
       #   script: |      
       #         curl -u "$CREDS" -X POST "https://api-cloud.browserstack.com/app-live/upload" -F "file=@build/ios/ipa/kobition_integration.ipa"
@@ -122,6 +137,7 @@ workflows:
 #           -H 'content-type: application/json' \
 #           -d "{\"filename\": \"kobition_integration.ipa\", \"appPath\": \"${APP_PATH}\"}"
     artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
+      - build/ios_integ/Build/Products/ios_tests.zip
+      # - build/ios/ipa/*.ipa
+      # - /tmp/xcodebuild_logs/*.log
+      # - flutter_drive.log
