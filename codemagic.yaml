@@ -92,7 +92,7 @@ workflows:
         script: |
           echo $GCLOUD_KEY_FILE > ./gcloud_key_file.json
           gcloud auth activate-service-account --key-file=gcloud_key_file.json
-          gcloud --quiet config set project flutter-integration-tests
+          gcloud --quiet config set project $FIREBASE_PROJECT 
           gcloud firebase test ios run --test "/Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip" \
             --device model=iphone11pro,version=14.7,locale=en_US,orientation=portrait \
             --xcode-version=13.3.1 \
