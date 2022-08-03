@@ -2,11 +2,11 @@ definitions:
   cool_vars: &cool_vars
     meow: 'testing'
   instance_mac_pro: &instance_mac_pro
-    instance_type: mac_pro
+    instance_type: mac_mini
     max_build_duration: 120
   env_versions: &env_versions
     flutter: stable
-    xcode: latest
+    xcode: 13.3.1
     cocoapods: default
   triggering:
     events:
@@ -79,40 +79,23 @@ workflows:
         script: |
           find . -name "Podfile" -execdir pod install \;
      
-          
-      # - name: Flutter Integration Tests iOS
-      #   script: |
-      #      flutter emulators --launch apple_ios_simulator
-      #      xcrun simctl boot 0B315533-768E-47B9-AC74-94CDF3FAE84F
-      #      flutter -d 0B315533-768E-47B9-AC74-94CDF3FAE84F test integration_test
-      - name: Flutter build ipa and automatic versioning
+      - name: Build test package
         script: |
-          flutter build ipa --release \
-          --build-name=6.0.0 \
-          --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
-          --export-options-plist=/Users/builder/export_options.plist
+          flutter build ios integration_test/app_test.dart --release
+          pushd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath ./build/ios_integ -sdk iphoneos build-for-testing 
+          popd
+          pushd /Users/builder/clone/ios/build/ios_integ/Build/Products
+          zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos15.4-arm64.xctestrun"
+          popd
       - name: Run Firebase Test Lab tests
         script: |
-            flutter build ipa integration_test/app_test.dart --release 
-
-            pushd ios
-            xcodebuild \
-              -workspace Runner.xcworkspace \
-              -scheme Runner \
-              -derivedDataPath "../build/ios_integ" \
-              -sdk iphoneos build-for-testing
-            popd
-
-            pushd build/ios_integ/Build/Products
-            zip -r "ios_tests.zip" "Release-staging-iphoneos" "staging_iphoneos15.5-arm64.xctestrun"
-            popd
-
-            echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
-            gcloud auth activate-service-account --key-file=gcloud_key_file.json
-            gcloud --quiet config set project vcp-mobile-stage
-            gcloud firebase test ios run \
-            --test build/ios_integ/Build/Products/ios_tests.zip \
-            --device model=iphone11,version=13.6,locale=en_US,orientation=portrait \
+          echo $GCLOUD_KEY_FILE > ./gcloud_key_file.json
+          gcloud auth activate-service-account --key-file=gcloud_key_file.json
+          gcloud --quiet config set project $FIREBASE_PROJECT 
+          gcloud firebase test ios run --test "/Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip" \
+            --device model=iphone11pro,version=14.7,locale=en_US,orientation=portrait \
+            --xcode-version=13.3.1 \
             --timeout 10m
               
 
@@ -148,7 +131,8 @@ workflows:
 #           -H 'content-type: application/json' \
 #           -d "{\"filename\": \"kobition_integration.ipa\", \"appPath\": \"${APP_PATH}\"}"
     artifacts:
-      - build/ios_integ/Build/Products/ios_tests.zip
-      # - build/ios/ipa/*.ipa
-      # - /tmp/xcodebuild_logs/*.log
-      # - flutter_drive.log
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - /Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip
