@@ -85,34 +85,34 @@ workflows:
       #      flutter emulators --launch apple_ios_simulator
       #      xcrun simctl boot 0B315533-768E-47B9-AC74-94CDF3FAE84F
       #      flutter -d 0B315533-768E-47B9-AC74-94CDF3FAE84F test integration_test
-      - name: Flutter build ipa and automatic versioning
+#       - name: Flutter build ipa and automatic versioning
+#         script: |
+#           flutter build ipa --release \
+#           --build-name=6.0.0 \
+#           --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
+#           --export-options-plist=/Users/builder/export_options.plist
+
+
+      - name: Build test package
         script: |
-          flutter build ipa --release \
-          --build-name=6.0.0 \
-          --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
-          --export-options-plist=/Users/builder/export_options.plist
+          flutter build ios integration_test/app_test.dart --release
+          pushd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Release.xcconfig -derivedDataPath ./build/ios_integ -sdk iphoneos build-for-testing 
+          popd
+          pushd /Users/builder/clone/ios/build/ios_integ/Build/Products
+          zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos15.4-arm64.xctestrun"
+          popd
       - name: Run Firebase Test Lab tests
         script: |
-            flutter build ipa integration_test/app_test.dart --release 
-
-            pushd ios
-            xcodebuild \
-              -workspace Runner.xcworkspace \
-              -scheme Runner \
-              -derivedDataPath "../build/ios_integ" \
-              -sdk iphoneos build-for-testing
-            popd
-
-            pushd build/ios_integ/Build/Products
-            zip -r "ios_tests.zip" "Release-iphoneos" "staging_iphoneos15.4-arm64.xctestrun"
-            popd
-
-            echo $GCLOUD_KEY_FILE | base64 --decode > ./gcloud_key_file.json
-            gcloud auth activate-service-account --key-file=gcloud_key_file.json
-            gcloud --quiet config set project vcp-mobile-stage
-            gcloud firebase test ios run \
-            --test build/ios_integ/Build/Products/ios_tests.zip \
-            --device model=iphone11,version=13.6,locale=en_US,orientation=portrait \
+           # Write the environment variable to a JSON file
+          echo $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS > ./gcloud_key_file.json
+          # Using the gcloud CLI (preinstalled on Codemagic) authenticate using the service account key
+          gcloud auth activate-service-account --key-file=gcloud_key_file.json
+          # Select YOUR Firebase project through which want to run the tests
+          gcloud --quiet config set project flutter-integration-tests
+          gcloud firebase test ios run --test "/Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip" \
+            --device model=iphone11pro,version=14.7,locale=en_US,orientation=portrait \
+            --xcode-version=13.3.1 \
             --timeout 10m
               
 
