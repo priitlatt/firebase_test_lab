@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:inegrate/main.dart';
+import 'package:firebase_test_lab/main.dart';
 // import 'dart:io';
 
 void main() {
