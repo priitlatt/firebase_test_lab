@@ -79,20 +79,6 @@ workflows:
         script: |
           find . -name "Podfile" -execdir pod install \;
      
-          
-      # - name: Flutter Integration Tests iOS
-      #   script: |
-      #      flutter emulators --launch apple_ios_simulator
-      #      xcrun simctl boot 0B315533-768E-47B9-AC74-94CDF3FAE84F
-      #      flutter -d 0B315533-768E-47B9-AC74-94CDF3FAE84F test integration_test
-#       - name: Flutter build ipa and automatic versioning
-#         script: |
-#           flutter build ipa --release \
-#           --build-name=6.0.0 \
-#           --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
-#           --export-options-plist=/Users/builder/export_options.plist
-
-
       - name: Build test package
         script: |
           flutter build ios integration_test/app_test.dart --release
@@ -104,11 +90,8 @@ workflows:
           popd
       - name: Run Firebase Test Lab tests
         script: |
-           # Write the environment variable to a JSON file
           echo $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS > ./gcloud_key_file.json
-          # Using the gcloud CLI (preinstalled on Codemagic) authenticate using the service account key
           gcloud auth activate-service-account --key-file=gcloud_key_file.json
-          # Select YOUR Firebase project through which want to run the tests
           gcloud --quiet config set project flutter-integration-tests
           gcloud firebase test ios run --test "/Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip" \
             --device model=iphone11pro,version=14.7,locale=en_US,orientation=portrait \
