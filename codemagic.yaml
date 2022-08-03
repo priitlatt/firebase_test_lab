@@ -131,7 +131,8 @@ workflows:
 #           -H 'content-type: application/json' \
 #           -d "{\"filename\": \"kobition_integration.ipa\", \"appPath\": \"${APP_PATH}\"}"
     artifacts:
-      - build/ios_integ/Build/Products/ios_tests.zip
-      # - build/ios/ipa/*.ipa
-      # - /tmp/xcodebuild_logs/*.log
-      # - flutter_drive.log
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+      - /Users/builder/clone/ios/build/ios_integ/Build/Products/ios_tests.zip
