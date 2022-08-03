@@ -43,7 +43,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "3624DDEC2899BF4F00EA2B03"
                BuildableName = "firebase_test_labTests.xctest"
-               BlueprintName = "firebase_test_labTests"
+               BlueprintName = "RunnerTests"
                ReferencedContainer = "container:Runner.xcodeproj">
             </BuildableReference>
          </TestableReference>
