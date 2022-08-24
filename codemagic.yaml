@@ -1,93 +1,19 @@
-definitions:
-  cool_vars: &cool_vars
-    meow: 'testing'
-  instance_mac_pro: &instance_mac_pro
-    instance_type: mac_pro
-    max_build_duration: 120
-  env_versions: &env_versions
-    flutter: stable
-    xcode: 13.3.1
-    cocoapods: default
-  triggering:
-    events:
-      - tag
-    tag_patterns:
-      - pattern: 'v1.2'
-  environment:
-    automatic_ios_signing: &automatic_ios_signing
-      groups:
-        - ios
-        - firebase_credentials
-      vars:
-        BUNDLE_ID: "com.example.firebaseTestLabtest"
-        XCODE_WORKSPACE: "Runner.xcworspace"
-        XCODE_SCHEME: "Runner"
 workflows:
   ios-workflow:
     name: iOS Workflow
-    <<: *instance_mac_pro
+    instance_type: mac_pro
     environment:
-        <<: *env_versions
-        <<: *automatic_ios_signing
-#         vars:
-#            <<: *cool_vars
-      
-#     instance_type: mac_pro
-#     max_build_duration: 120
-#     environment:
-#       groups:
-#         - appstore_credentials
-#       vars:
-#         XCODE_WORKSPACE: "Runner.xcworkspace"
-#         XCODE_SCHEME: "Runner"                
-#         BUNDLE_ID: "com.example.kobitionIntegration"
-#         APP_STORE_ID: 1625065284
-
-# #         APPPATH: "build/ios/ipa/kobition_integration.ipa"
-# #         APP_KEY: "123"
-
-#       flutter: stable
-#       xcode: edge
-#       cocoapods: default
+      flutter: stable
+      xcode: 13.3.1
+      cocoapods: default
     scripts:
-#       - name: Firebase
-#         script: |
-#           flutter pub add firebase_core
-#           flutter pub add firebase_messaging
-
-    
-      - name: Set up keychain to be used for codesigning using Codemagic CLI 'keychain' command
-        script: |
-          keychain initialize
-#         /usr/local/bin/docker --version
-#         echo $CREDS
-#         echo $Test
-      - name: Fetch signing files
-        script: |
-          app-store-connect fetch-signing-files $BUNDLE_ID --type IOS_APP_DEVELOPMENT --create
-      - name: Use system default keychain
-        script: |
-          keychain add-certificates
-#       - *codesign
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
-      - name: Get Flutter packages
-        script: |
-          cd . && flutter packages pub get         
-      - name: Install pods
-        script: |
-          find . -name "Podfile" -execdir pod install \;
-     
       - name: Build test package
         script: |
-          flutter build ios integration_test/app_test.dart --release
-          pushd ios
+          flutter build ios integration_test/app_test.dart --release --no-codesign
+          cd ios
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -config Flutter/Runner.xcworkspace -derivedDataPath ./build/ios_integ -sdk iphonesimulator build-for-testing 
-          popd
-          pushd /Users/builder/clone/ios/build/ios_integ/Build/Products
+          cd build/ios_integ/Build/Products
           zip -r "ios_tests.zip" "Release-iphoneos" "Runner_iphoneos15.4-arm64.xctestrun"
-          popd
       - name: Run Firebase Test Lab tests
         script: |
           echo $GCLOUD_KEY_FILE > ./gcloud_key_file.json
@@ -97,39 +23,7 @@ workflows:
             --device model=iphone11pro,version=14.7,locale=en_US,orientation=portrait \
             --xcode-version=13.3.1 \
             --timeout 10m
-              
 
-      # - name: BrowserStack upload
-      #   script: |      
-      #         curl -u "$CREDS" -X POST "https://api-cloud.browserstack.com/app-live/upload" -F "file=@build/ios/ipa/kobition_integration.ipa"
-      #         echo $TEST
-#       - name: Pcloudy
-#         script: |
-#           curl -X POST -F "file=@/build/ios/ipa/kobition_integration.ipa" -F "source_type=raw" -F "token=93zqy94twt7325vhkg49cbkf" -F "filter=all" https://device.pcloudy.com/api/upload_file
-
-#       - name: Kobiton integration
-#         script: |       
-#          APP_URL=$(curl -X POST https://api.kobiton.com/v1/apps/uploadUrl \
-#           -H 'Authorization: Basic bmloYWxuZXZlcmNvZGU6YzBlYjVhYjQtM2YzZi00M2MwLTkzMjUtMWVhNDczMzQ5Y2E4' \
-#           -H 'Content-Type: application/json' \
-#           -H 'Accept: application/json' \
-#           -d "{\"filename\": \"kobition_integration.ipa\"}" | jq -r '.url')
-          
-#          APP_PATH=$(curl -X POST https://api.kobiton.com/v1/apps/uploadUrl \
-#           -H 'Authorization: Basic bmloYWxuZXZlcmNvZGU6YzBlYjVhYjQtM2YzZi00M2MwLTkzMjUtMWVhNDczMzQ5Y2E4' \
-#           -H 'Content-Type: application/json' \
-#           -H 'Accept: application/json' \
-#           -d "{\"filename\": \"kobition_integration.ipa\"}" | jq -r '.appPath')
-          
-#          curl -T "${APPPATH}" \
-#           -H 'content-type: application/octet-stream' \
-#           -H 'x-amz-tagging: unsaved=true' \
-#           -X PUT "${APP_URL}"
-          
-#          curl -X POST https://api.kobiton.com/v1/apps \
-#           -H 'Authorization: Basic bmloYWxuZXZlcmNvZGU6YzBlYjVhYjQtM2YzZi00M2MwLTkzMjUtMWVhNDczMzQ5Y2E4' \
-#           -H 'content-type: application/json' \
-#           -d "{\"filename\": \"kobition_integration.ipa\", \"appPath\": \"${APP_PATH}\"}"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
